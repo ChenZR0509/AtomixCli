@@ -13,15 +13,24 @@
 /* Variable Definition-----------------------------------------------------*/
 /* Functions Declare------------------------------------------------------------------*/
 /* Function Definition------------------------------------------------------------------*/
-CliConfig* initCli(const char* name, const char* filePath, const PrintCmdFunction printCmd,
+CliConfig* initCli(const char* name, const char* filePath,
+    const RegisterCommandTree registerCommandTree,
+    const PrintCmdFunction printCmd,
     const PrintFileFunction printFile)
 {
-    if (name == NULL || filePath == NULL || printCmd == NULL || printFile == NULL) return NULL;
+    if (name == NULL || filePath == NULL
+        || registerCommandTree == NULL
+        || printCmd == NULL || printFile == NULL) return NULL;
 
     CliConfig* cli = NULL;
     cli = calloc(1, sizeof(CliConfig));
     if (cli == NULL) return NULL;
 
+    //函数注册
+    cli->printCmd = printCmd;
+    cli->printFile = printFile;
+    cli->registerCommandTree = registerCommandTree;
+    //基础信息
     cli->name = strdup(name);
     if (cli->name == NULL)
     {
@@ -29,11 +38,17 @@ CliConfig* initCli(const char* name, const char* filePath, const PrintCmdFunctio
         return NULL;
     }
     //日志输出
-    cli->printCmd = printCmd;
-    cli->printFile = printFile;
     cli->logConfig = initLog(filePath, 1024, CmdMode, TLStyle);
     if (cli->logConfig == NULL)
     {
+        unInitCli(cli);
+        return NULL;
+    }
+    //命令树
+    cli->commandTree = cli->registerCommandTree(cli);
+    if (cli->commandTree == NULL)
+    {
+        printLog(cli,LogError, "Failed to init CLI. [Cli: %s]",__FUNCTION__,cli->name);
         unInitCli(cli);
         return NULL;
     }
@@ -53,6 +68,11 @@ void unInitCli(CliConfig* cli)
     {
         uninitLog(cli->logConfig);
         cli->logConfig = NULL;
+    }
+    if (cli->commandTree)
+    {
+        unRegisterCommandTree(cli);
+        cli->commandTree = NULL;
     }
 
     cli->printCmd = NULL;

@@ -23,9 +23,27 @@ void printFileFunction(const char* logContent, const char* file)
     printf("%s [%s]", logContent,file);
 }
 
+CommandNode* registerCommandTree(CliConfig* cli)
+{
+    if (cli == NULL) return NULL;
+
+    CommandNode* commandTree = NULL;
+    commandTree = registerCommand(cli, "set", NULL);
+    registerCommand(cli, "reset", NULL);
+    registerCommand(cli, "get", NULL);
+    registerCommand(cli, "load", NULL);
+    registerCommand(cli, "unload", NULL);
+    registerCommand(cli, "start", NULL);
+    registerCommand(cli, "pause", NULL);
+    registerCommand(cli, "resume", NULL);
+    registerCommand(cli, "finish", NULL);
+    return commandTree;
+}
+
 int main()
 {
-    CliConfig* cli = initCli("CLI1", "cli.log", printCmdFunction, printFileFunction);
+    CliConfig* cli = initCli("CLI1", "cli.log", registerCommandTree,
+        printCmdFunction, printFileFunction);
     bool isQuit = false;
     while (isQuit == false)
     {
@@ -39,14 +57,6 @@ int main()
         else
         {
             Pipeline* pipe = initPipeline(cli, input);
-            for (uint16_t i = 0; i < pipe->stageList->count; i++)
-            {
-                for (uint16_t j = 0; j < pipe->stageList->stages[i]->words->count; j++)
-                {
-                    printf("%s\r\n", pipe->stageList->stages[i]->words->words[j]);
-                }
-                printf("\n");
-            }
             unInitPipeline(pipe);
         }
     }

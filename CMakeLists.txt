@@ -15,9 +15,11 @@ add_executable(AtomixCli main.c
         include/cliConfig.h
         include/cliLog.h
         include/cliPipeline.h
+        include/cliCommand.h
         src/cliConfig.c
         src/cliLog.c
-        src/cliPipeline.c)
+        src/cliPipeline.c
+        src/cliCommand.c)
 target_include_directories(
         AtomixCli
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
