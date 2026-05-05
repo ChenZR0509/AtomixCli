@@ -13,7 +13,6 @@
 /* Variable Definition-----------------------------------------------------*/
 /* Functions Declare------------------------------------------------------------------*/
 /* Function Definition------------------------------------------------------------------*/
-
 CliConfig* initCli(const char* name, const char* filePath, const PrintCmdFunction printCmd,
     const PrintFileFunction printFile)
 {

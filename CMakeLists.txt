@@ -14,8 +14,10 @@ set(CMAKE_C_STANDARD 11)
 add_executable(AtomixCli main.c
         include/cliConfig.h
         include/cliLog.h
+        include/cliPipeline.h
         src/cliConfig.c
-        src/cliLog.c)
+        src/cliLog.c
+        src/cliPipeline.c)
 target_include_directories(
         AtomixCli
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include

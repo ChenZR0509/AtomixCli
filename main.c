@@ -5,6 +5,8 @@
  */
 /* Includes" "------------------------------------------------------------------*/
 #include "cliConfig.h"
+
+#include "cliPipeline.h"
 /* Includes< >------------------------------------------------------------------*/
 #include <stdio.h>
 #include <string.h>
@@ -36,7 +38,16 @@ int main()
         }
         else
         {
-            printLog(cli, LogInfo, input);
+            Pipeline* pipe = initPipeline(cli, input);
+            for (uint16_t i = 0; i < pipe->stageList->count; i++)
+            {
+                for (uint16_t j = 0; j < pipe->stageList->stages[i]->words->count; j++)
+                {
+                    printf("%s\r\n", pipe->stageList->stages[i]->words->words[j]);
+                }
+                printf("\n");
+            }
+            unInitPipeline(pipe);
         }
     }
     unInitCli(cli);
