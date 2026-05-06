@@ -33,7 +33,7 @@ bool setCmdFullName(CommandNode* command);
  */
 void freeCommand(CommandNode* command);
 /* Function Definition------------------------------------------------------------------*/
-CommandNode* registerCommand(CliConfig* cli, const char *name ,CommandNode* parent)
+CommandNode* registerCommand(CliConfig* cli, const char *name ,CommandNode* parent, CommandFunction function)
 {
     /// Note parent可以为空，其表示直接挂载在命令树上是一级节点
     if (cli == NULL || name == NULL) return NULL;
@@ -101,6 +101,7 @@ CommandNode* registerCommand(CliConfig* cli, const char *name ,CommandNode* pare
         command->previous = tempCommand;
     }
 
+    command->function = function;
     return command;
 }
 
@@ -121,6 +122,7 @@ void freeCommand(CommandNode* command)
     command->previous = NULL;
     command->next = NULL;
     command->children = NULL;
+    command->function = NULL;
     free(command);
 }
 
@@ -230,3 +232,29 @@ bool setCmdFullName(CommandNode* command)
     return true;
 }
 
+CommandNode* findCommand(const CliConfig* cli, const CommandNode* parentNode, const char* name)
+{
+    if (cli == NULL || name == NULL) return NULL;
+
+    const size_t inputLength = strlen(name);
+    CommandNode* tempCommand = NULL;
+
+    if (parentNode == NULL)
+    {
+        tempCommand = cli->commandTree;
+    }
+    else
+    {
+        tempCommand = parentNode->children;
+    }
+    for (; tempCommand != NULL; tempCommand = tempCommand->next)
+    {
+        if (tempCommand->name == NULL) continue;
+        if (strlen(tempCommand->name) != inputLength) continue;
+        if (strcmp(tempCommand->name, name) == 0)
+        {
+            return tempCommand;
+        }
+    }
+    return NULL;
+}

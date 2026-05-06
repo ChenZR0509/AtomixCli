@@ -6,6 +6,7 @@
 #ifndef CLIPIPELINE_H
 #define CLIPIPELINE_H
 /* Includes" "------------------------------------------------------------------*/
+#include "cliCommand.h"
 /* Includes< >------------------------------------------------------------------*/
 #include <stdint.h>
 /* Forward Declaration------------------------------------------------------------------*/
@@ -18,8 +19,11 @@ typedef struct WordList {
 }WordList;                  ///< WordList 单词列表
 typedef struct PipelineStage
 {
-    WordList* words;        ///< words 单词
-}PipelineStage;             ///< PipelineStage 管道阶段
+    WordList* wordList;           ///< words 单词列表
+    CommandNode* commandNode;     ///< commandNode 当前阶段匹配到的命令节点
+    char** argv;                  ///< argv 当前阶段的参数单词数组
+    uint16_t argc;                ///< argc 当前阶段的参数单词数量
+}PipelineStage;                   ///< PipelineStage 管道阶段
 typedef struct PipelineStageList
 {
     PipelineStage** stages;         ///< stages 管道数组
@@ -53,4 +57,16 @@ Pipeline* initPipeline(const CliConfig* cli, const char* commandLine);
  * @return void
  */
 void unInitPipeline(Pipeline* pipeline);
+/**
+ * @name executePipeline
+ * @brief 执行管道
+ *
+ * @param[in] cli CLI配置结构体
+ * @param[in] pipeline 管道
+ * @return 管道执行成功则返回true，失败则返回false
+ *
+ * @note
+ * @warning
+ */
+bool executePipeline(const CliConfig* cli, const Pipeline* pipeline);
 #endif

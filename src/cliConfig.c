@@ -5,6 +5,7 @@
  */
 /* Includes" "------------------------------------------------------------------*/
 #include "cliConfig.h"
+#include "cliPipeline.h"
 /* Includes< >------------------------------------------------------------------*/
 #include <string.h>
 #include <stdlib.h>
@@ -79,4 +80,14 @@ void unInitCli(CliConfig* cli)
     cli->printFile = NULL;
 
     free(cli);
+}
+
+void runCli(const CliConfig* cli,const char* input)
+{
+    Pipeline* pipe = initPipeline(cli, input);
+    if (pipe != NULL)
+    {
+        executePipeline(cli, pipe);
+        unInitPipeline(pipe);
+    }
 }

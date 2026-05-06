@@ -113,6 +113,16 @@ bool tokenizeCommandLine(const CliConfig* cli, const char* commandLine, WordList
  * @return bool 如果分词成功则返回true，失败返回false
  */
 bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineStageList* stages);
+/**
+ * @name parsePipeline
+ * @brief 解析命令行，将管道阶段对应到具体的命令节点上，以方便后续的命令执行
+ * @details
+ *
+ * @param[in] cli CLI结构体指针
+ * @param[in] pipeline 管道结构体指针
+ * @return bool 如果解析成功则返回true，失败返回false
+ */
+bool parsePipeline(const CliConfig* cli,const Pipeline* pipeline);
 /* Function Definition------------------------------------------------------------------*/
 Pipeline* initPipeline(const CliConfig* cli, const char* commandLine)
 {
@@ -129,6 +139,7 @@ Pipeline* initPipeline(const CliConfig* cli, const char* commandLine)
         unInitPipeline(pipeline);
         return NULL;
     }
+    // 命令行分词
     pipeline->wordList = initWordList();
     if (pipeline->wordList == NULL)
     {
@@ -137,9 +148,11 @@ Pipeline* initPipeline(const CliConfig* cli, const char* commandLine)
     }
     if (tokenizeCommandLine(cli, commandLine, pipeline->wordList) == false)
     {
+        printLog(cli, LogError, "Failed to tokenize command line. [Cli: %s]\n", cli->name);
         unInitPipeline(pipeline);       /// Note 解析失败则释放资源
         return NULL;
     }
+    // 命令行分管道
     pipeline->stageList = initStageList();
     if (pipeline->stageList == NULL)
     {
@@ -148,6 +161,14 @@ Pipeline* initPipeline(const CliConfig* cli, const char* commandLine)
     }
     if (tokenizePipeline(cli, pipeline->wordList, pipeline->stageList) == false)
     {
+        printLog(cli, LogError, "Failed to tokenize pipeline. [Cli: %s]\n", cli->name);
+        unInitPipeline(pipeline);
+        return NULL;
+    }
+    // 命令行解析
+    if (parsePipeline(cli, pipeline) == false)
+    {
+        printLog(cli, LogError, "Failed to parse pipeline. [Cli: %s]\n", cli->name);
         unInitPipeline(pipeline);
         return NULL;
     }
@@ -311,8 +332,8 @@ PipelineStage* initPipelineStage(void)
     stage = calloc(1, sizeof(PipelineStage));
     if (stage == NULL)  return NULL;
 
-    stage->words = initWordList();
-    if (stage->words == NULL)
+    stage->wordList = initWordList();
+    if (stage->wordList == NULL)
     {
         unInitPipelineStage(stage);
         return NULL;
@@ -324,11 +345,23 @@ void unInitPipelineStage(PipelineStage* stage)
 {
     if (stage == NULL) return;
 
-    if (stage->words != NULL)
+    if (stage->wordList != NULL)
     {
-        unInitWordList(stage->words);
-        stage->words = NULL;
+        unInitWordList(stage->wordList);
+        stage->wordList = NULL;
     }
+    if (stage->argv != NULL)
+    {
+        for (uint16_t i = 0; i < stage->argc; i++)
+        {
+            free(stage->argv[i]);
+        }
+        free(stage->argv);
+        stage->argv = NULL;
+        stage->argc = 0;
+    }
+    stage->commandNode = NULL;
+    stage->argc = 0;
     free(stage);
 }
 
@@ -341,7 +374,7 @@ char* unescapeWord(const char* start, const char* end)
     char *tempPointer = NULL;
     const size_t length = (size_t)(end-start);
 
-    result = calloc(length, sizeof(char));
+    result = calloc(length+1, sizeof(char));
     if (result == NULL) return NULL;
     /// Note 由于是逐个字符拷贝，拷贝过程中不可避免的会移动指针，因此需要使用一个tempPointer
     tempPointer = result;
@@ -352,6 +385,7 @@ char* unescapeWord(const char* start, const char* end)
         /// Note 将字符拷贝到对应的地址
         else *tempPointer++ = *start++;
     }
+    *tempPointer = '\0';
     return result;
 }
 
@@ -418,10 +452,7 @@ bool tokenizeCommandLine(const CliConfig* cli, const char* commandLine, WordList
         printLog(cli,LogError,"Failed to parse command line: quote mismatch!\n");
         return false;
     }
-    else
-    {
-        return true;
-    }
+    return true;
 }
 
 bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineStageList* stages)
@@ -447,7 +478,7 @@ bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineSt
                     unInitPipelineStage(tempStage);
                     return false;
                 }
-                if (addWord(tempStage->words, tempWord) == false)
+                if (addWord(tempStage->wordList, tempWord) == false)
                 {
                     free(tempWord);
                     unInitPipelineStage(tempStage);
@@ -458,7 +489,7 @@ bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineSt
             {
                 char* tempWord = strdup(wordList->words[i]);
                 if (tempWord == NULL)  return false;
-                if (addWord(tempStage->words, tempWord) == false)
+                if (addWord(tempStage->wordList, tempWord) == false)
                 {
                     free(tempWord);
                     unInitPipelineStage(tempStage);
@@ -478,7 +509,81 @@ bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineSt
     return true;
 }
 
-// bool parsePipeline(const CliConfig* cli, Pipeline* pipeline)
-// {
-//
-// }
+bool parsePipeline(const CliConfig* cli, const Pipeline* pipeline)
+{
+    if (cli == NULL || pipeline == NULL) return false;
+    if (cli->commandTree == NULL) return false;
+    if (pipeline->stageList == NULL) return false;
+
+    for (uint16_t i = 0; i < pipeline->stageList->count; i++)
+    {
+        PipelineStage* stage = pipeline->stageList->stages[i];
+        if (stage == NULL || stage->wordList == NULL) return false;
+
+        const CommandNode* parentNode = NULL;
+        CommandNode* matchedNode = NULL;
+        CommandNode* resultNode = NULL;
+        uint16_t j = 0;
+        for (; j < stage->wordList->count; j++)
+        {
+            const char* word = stage->wordList->words[j];
+            if (word == NULL) return false;
+            matchedNode = findCommand(cli, parentNode, word);
+            if (matchedNode == NULL) break;
+            resultNode = matchedNode;
+            parentNode = resultNode;
+        }
+        if (resultNode == NULL) return false;
+        stage->commandNode = resultNode;
+        stage->argc = stage->wordList->count-j;
+        if (stage->argc > 0)
+        {
+            stage->argv = calloc(stage->argc+1, sizeof(char*));
+            if (stage->argv == NULL) return false;
+            for (uint16_t k = 0; k < stage->argc; k++)
+            {
+                stage->argv[k] = strdup(stage->wordList->words[j+k]);
+                if (stage->argv[k] == NULL)
+                {
+                    for (uint16_t n = 0; n < k; n++)
+                    {
+                        free(stage->argv[n]);
+                    }
+                    free(stage->argv);
+                    stage->argv = NULL;
+                    stage->argc = 0;
+                    return false;
+                }
+            }
+            stage->argv[stage->argc] = NULL;
+        }
+        else
+        {
+            stage->argv = NULL;
+        }
+    }
+    return true;
+}
+
+bool executePipeline(const CliConfig* cli, const Pipeline* pipeline)
+{
+    if (cli == NULL || pipeline == NULL) return false;
+    if (pipeline->stageList == NULL) return false;
+
+    for (uint16_t i = 0; i < pipeline->stageList->count; i++)
+    {
+        PipelineStage* stage = pipeline->stageList->stages[i];
+        if (stage == NULL || stage->commandNode == NULL) return false;
+
+        const CommandNode* commandNode = stage->commandNode;
+        if (commandNode->function != NULL)
+        {
+            if (commandNode->function(cli, commandNode->name, stage->argv, stage->argc) == false)
+            {
+                printLog(cli, LogError, "Failed to execute command. [Cmd: %s]\n", commandNode->fullName);
+                return false;
+            }
+        }
+    }
+    return true;
+}

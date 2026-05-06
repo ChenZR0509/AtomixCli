@@ -51,6 +51,15 @@ CliConfig* initCli(const char* name, const char* filePath,
  * @param[in] cli CLI结构体指针
  */
 void unInitCli(CliConfig* cli);
+/**
+ * @name runCli
+ * @brief 运行CLI
+ *
+ * @param[in] cli CLI结构体指针
+ * @param[in] input 字符串输入
+ * @return 返回值说明。
+ */
+void runCli(const CliConfig* cli,const char* input);
 #ifdef __cplusplus
 }
 #endif

@@ -23,22 +23,38 @@ void printFileFunction(const char* logContent, const char* file)
     printf("%s [%s]", logContent,file);
 }
 
+bool setLed(const CliConfig* cli, const char *commandName, char** argv, uint16_t argc)
+{
+    if (cli == NULL || commandName == NULL) return false;
+
+    if (argc != 1)  return false;
+    const char* ledState = argv[0];
+    if (strcmp(ledState, "on") == 0)
+    {
+        printLog(cli, LogInfo, "LED is turned ON. [Fun: %s]\r\n", __FUNCTION__);
+    }
+    else if (strcmp(ledState, "off") == 0)
+    {
+        printLog(cli, LogInfo, "LED is turned OFF. [Fun: %s]\r\n", __FUNCTION__);
+    }
+    else
+    {
+        return false;
+    }
+    return true;
+}
+
 CommandNode* registerCommandTree(CliConfig* cli)
 {
     if (cli == NULL) return NULL;
 
-    CommandNode* commandTree = NULL;
-    commandTree = registerCommand(cli, "set", NULL);
-    registerCommand(cli, "reset", NULL);
-    registerCommand(cli, "get", NULL);
-    registerCommand(cli, "load", NULL);
-    registerCommand(cli, "unload", NULL);
-    registerCommand(cli, "start", NULL);
-    registerCommand(cli, "pause", NULL);
-    registerCommand(cli, "resume", NULL);
-    registerCommand(cli, "finish", NULL);
-    return commandTree;
+    CommandNode* setCommand = NULL;
+    setCommand = registerCommand(cli, "set", NULL, NULL);
+    registerCommand(cli, "led", setCommand, setLed);
+    return setCommand;
 }
+
+
 
 int main()
 {
@@ -56,8 +72,7 @@ int main()
         }
         else
         {
-            Pipeline* pipe = initPipeline(cli, input);
-            unInitPipeline(pipe);
+            runCli(cli, input);
         }
     }
     unInitCli(cli);
