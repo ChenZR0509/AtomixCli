@@ -54,7 +54,6 @@ typedef struct CliConfig
     char* name;                     ///< name CLI 配置的名字
     LogConfig* logConfig;           ///< logConfig 日志
     CommandNode* commandTree;       ///< commandTree 命令树
-
     RegisterCommandTree registerCommandTree; ///< registerCommandTree 命令树注册函数指针
     PrintCmdFunction printCmd;      ///< cmdPrint 命令行打印函数指针
     PrintFileFunction printFile;    ///< filePrint 文件打印函数指针

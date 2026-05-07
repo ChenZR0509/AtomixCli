@@ -17,9 +17,9 @@ typedef struct CommandNode CommandNode;
 /**
  * @name *CommandFunction
  * @brief 命令回调函数
- * @return bool 回调函数是否执行成功
+ * @return void
  */
-typedef bool (*CommandFunction)(const CliConfig*, const char*, char **, uint16_t);
+typedef void (*CommandFunction)(const CliConfig*, const char*, char **, uint16_t);
 /* DataType Definition------------------------------------------------------------------*/
 typedef struct CommandNode
 {

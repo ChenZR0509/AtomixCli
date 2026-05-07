@@ -147,7 +147,6 @@ Pipeline* initPipeline(const CliConfig* cli, const char* commandLine)
     // 命令行分词：将命令行字符串分成单词并存储至pipeline->wordList
     if (tokenizeCommandLine(cli, commandLine, pipeline->wordList) == false)
     {
-        printLog(cli, LogError, "Failed to tokenize command line. [Cli: %s]\r\n", commandLine);
         unInitPipeline(pipeline);       /// Note 解析失败则释放资源
         return NULL;
     }
@@ -160,14 +159,12 @@ Pipeline* initPipeline(const CliConfig* cli, const char* commandLine)
     }
     if (tokenizePipeline(cli, pipeline->wordList, pipeline->stageList) == false)
     {
-        printLog(cli, LogError, "Failed to tokenize pipeline. [Cli: %s]\r\n", cli->name);
         unInitPipeline(pipeline);
         return NULL;
     }
     // 管道解析：将管道阶段对应到具体的命令节点上，以方便后续的命令执行
     if (parsePipeline(cli, pipeline) == false)
     {
-        printLog(cli, LogError, "Failed to parse pipeline. [Cli: %s]\r\n", cli->name);
         unInitPipeline(pipeline);
         return NULL;
     }
@@ -445,7 +442,6 @@ bool tokenizeCommandLine(const CliConfig* cli, const char* commandLine, WordList
     }
     if (quotationMark != 0)
     {
-        printLog(cli,LogError,"Quote mismatch detected in command! [%s]\n", commandLine);
         return false;
     }
     return true;
@@ -465,7 +461,6 @@ bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineSt
             /// Note 如果管道符'|'出现在单词列表的开头或者末尾，说明存在空管道阶段，解析失败
             if (strcmp(wordList->words[i], "|") == 0 && (i == lastPosition || i == wordList->count - 1))
             {
-                printLog(cli, LogError, "Empty pipeline stage detected in command! [Cli: %s]\n", cli->name);
                 return false;
             }
 
@@ -508,7 +503,6 @@ bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineSt
             /// Note 判断是否为空管道
             if (tempStage->wordList->count == 0)
             {
-                printLog(cli, LogError, "Empty pipeline stage detected in command! [Cli: %s]\n", cli->name);
                 unInitPipelineStage(tempStage);
                 return false;
             }
@@ -556,6 +550,7 @@ bool parsePipeline(const CliConfig* cli, const Pipeline* pipeline)
         /// Note 将后面的单词视为参数，初始化argv和argc
         if (stage->wordList->count-j > 0)
         {
+            /// Note 分配时候加2表示，一个是上一个管道的输入，一个是argv数组最后一个元素的NULL
             stage->argv = calloc(stage->wordList->count-j+1, sizeof(char*));
             if (stage->argv == NULL) return false;
             stage->argc = stage->wordList->count-j;
@@ -588,20 +583,16 @@ bool executePipeline(const CliConfig* cli, const Pipeline* pipeline)
 {
     if (cli == NULL || pipeline == NULL) return false;
     if (pipeline->stageList == NULL) return false;
-
+    char* result = NULL;
     for (uint16_t i = 0; i < pipeline->stageList->count; i++)
     {
-        PipelineStage* stage = pipeline->stageList->stages[i];
+        const PipelineStage* stage = pipeline->stageList->stages[i];
         if (stage == NULL || stage->commandNode == NULL) return false;
 
         const CommandNode* commandNode = stage->commandNode;
         if (commandNode->callback != NULL)
         {
-            if (commandNode->callback(cli, commandNode->name, stage->argv, stage->argc) == false)
-            {
-                printLog(cli, LogError, "Failed to execute command. [Cmd: %s]\n", commandNode->fullName);
-                return false;
-            }
+            commandNode->callback(cli, commandNode->name, stage->argv, stage->argc);
         }
     }
     return true;

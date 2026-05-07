@@ -25,11 +25,10 @@ void printFileFunction(const char* logContent, const char* file, const uint16_t 
     printf("%s [%s]", logContent,file);
 }
 
-bool setLed(const CliConfig* cli, const char *commandName, char** argv, uint16_t argc)
+void setLed(const CliConfig* cli, const char *commandName, char** argv, uint16_t argc)
 {
-    if (cli == NULL || commandName == NULL) return false;
-
-    if (argc != 1)  return false;
+    if (cli == NULL || commandName == NULL) return;
+    if (argc != 1) return;
     const char* ledState = argv[0];
     if (strcmp(ledState, "on") == 0)
     {
@@ -41,9 +40,27 @@ bool setLed(const CliConfig* cli, const char *commandName, char** argv, uint16_t
     }
     else
     {
-        return false;
+        printLog(cli, LogError, "Invalid command arguments. [Fun: %s]\r\n", __FUNCTION__);
     }
-    return true;
+}
+
+void setPwm(const CliConfig* cli, const char *commandName, char** argv, uint16_t argc)
+{
+    if (cli == NULL || commandName == NULL) return;
+    if (argc != 1) return;
+    const char* pwmState = argv[0];
+    if (strcmp(pwmState, "on") == 0)
+    {
+        printLog(cli, LogInfo, "PWM is turned ON. [Fun: %s]\r\n", __FUNCTION__);
+    }
+    else if (strcmp(pwmState, "off") == 0)
+    {
+        printLog(cli, LogInfo, "PWM is turned OFF. [Fun: %s]\r\n", __FUNCTION__);
+    }
+    else
+    {
+        printLog(cli, LogError, "Invalid command arguments. [Fun: %s]\r\n", __FUNCTION__);
+    }
 }
 
 CommandNode* registerCommandTree(CliConfig* cli)
@@ -53,6 +70,7 @@ CommandNode* registerCommandTree(CliConfig* cli)
     CommandNode* setCommand = NULL;
     setCommand = registerCommand(cli, "set", NULL, NULL);
     registerCommand(cli, "led", setCommand, setLed);
+    registerCommand(cli, "pwm", setCommand, setPwm);
     return setCommand;
 }
 

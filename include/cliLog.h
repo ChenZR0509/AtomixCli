@@ -33,7 +33,7 @@ typedef enum
     CmdMode,        ///< CmdMode 只输出到终端
     FileMode,       ///< FileMode 只输出到日志文件
 }LogMode;
-typedef struct
+typedef struct LogConfig
 {
     char* filePath;         ///< filePath 日志文件指针
     uint16_t bufferSize;    ///< bufferSize 日志缓冲区大小
