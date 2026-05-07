@@ -576,9 +576,9 @@ bool executePipeline(const CliConfig* cli, const Pipeline* pipeline)
         if (stage == NULL || stage->commandNode == NULL) return false;
 
         const CommandNode* commandNode = stage->commandNode;
-        if (commandNode->function != NULL)
+        if (commandNode->callback != NULL)
         {
-            if (commandNode->function(cli, commandNode->name, stage->argv, stage->argc) == false)
+            if (commandNode->callback(cli, commandNode->name, stage->argv, stage->argc) == false)
             {
                 printLog(cli, LogError, "Failed to execute command. [Cmd: %s]\n", commandNode->fullName);
                 return false;

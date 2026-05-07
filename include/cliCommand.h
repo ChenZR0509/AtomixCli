@@ -14,18 +14,22 @@ extern "C" {
 /* Forward Declaration------------------------------------------------------------------*/
 typedef struct CliConfig CliConfig;
 typedef struct CommandNode CommandNode;
+/**
+ * @name *CommandFunction
+ * @brief 命令回调函数
+ * @return bool 回调函数是否执行成功
+ */
 typedef bool (*CommandFunction)(const CliConfig*, const char*, char **, uint16_t);
 /* DataType Definition------------------------------------------------------------------*/
 typedef struct CommandNode
 {
     char* name;                 ///< name 当前节点的名字
     char* fullName;             ///< fullName 完整命令路径
-    uint8_t minLength;          ///< minLength 最小匹配长度
     CommandNode *previous;      ///< previous 命令树同级前一个节点
     CommandNode *next;          ///< next 命令树同级下一个节点
     CommandNode *children;      ///< children 命令树下一级第一个子节点
     CommandNode *parent;        ///< parent 命令树父节点
-    CommandFunction function;   ///< function 命令执行函数指针
+    CommandFunction callback;   ///< callback 命令执行函数指针
 }CommandNode;
 /* Variable Declare------------------------------------------------------------------*/
 /* Functions Declare------------------------------------------------------------------*/
@@ -36,14 +40,14 @@ typedef struct CommandNode
  * @param[in] cli 命令行结构体指针
  * @param[in] name 命令名称
  * @param[in] parent 父命令节点
- * @param[in] function 命令执行函数指针
+ * @param[in] callback 命令执行函数指针
  * @return Command* 注册的命令节点结构体，
  *
  * @note 如果是第一次注册那么应将其返回值赋值给cli->commandTree
  * @note 如果不是第一次第一次注册且parent不为NULL，则节点挂载在对应的父节点下
  * @note 如果不是第一次第一次注册且parent为NULL，则节点挂载在根命令列表的末尾
  */
-CommandNode* registerCommand(CliConfig* cli, const char *name ,CommandNode* parent, CommandFunction function);
+CommandNode* registerCommand(CliConfig* cli, const char *name ,CommandNode* parent, const CommandFunction callback);
 /**
  * @name unRegisterCommand
  * @brief 命令注销函数

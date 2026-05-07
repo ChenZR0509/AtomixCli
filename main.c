@@ -13,13 +13,15 @@
 #include <stdlib.h>
 #include <stdbool.h>
 /* Main------------------------------------------------------------------*/
-void printCmdFunction(const char* logContent)
+void printCmdFunction(const char* logContent, const uint16_t contentLength)
 {
+    (void)contentLength;
     printf("%s", logContent);
 }
 
-void printFileFunction(const char* logContent, const char* file)
+void printFileFunction(const char* logContent, const char* file, const uint16_t contentLength)
 {
+    (void)contentLength;
     printf("%s [%s]", logContent,file);
 }
 
@@ -53,8 +55,6 @@ CommandNode* registerCommandTree(CliConfig* cli)
     registerCommand(cli, "led", setCommand, setLed);
     return setCommand;
 }
-
-
 
 int main()
 {

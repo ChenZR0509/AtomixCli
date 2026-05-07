@@ -33,9 +33,10 @@ bool setCmdFullName(CommandNode* command);
  */
 void freeCommand(CommandNode* command);
 /* Function Definition------------------------------------------------------------------*/
-CommandNode* registerCommand(CliConfig* cli, const char *name ,CommandNode* parent, CommandFunction function)
+CommandNode* registerCommand(CliConfig* cli, const char *name, CommandNode* parent, const CommandFunction callback)
 {
     /// Note parent可以为空，其表示直接挂载在命令树上是一级节点
+    /// Note
     if (cli == NULL || name == NULL) return NULL;
 
     CommandNode* command = NULL;
@@ -101,7 +102,7 @@ CommandNode* registerCommand(CliConfig* cli, const char *name ,CommandNode* pare
         command->previous = tempCommand;
     }
 
-    command->function = function;
+    command->callback = callback;
     return command;
 }
 
@@ -122,7 +123,7 @@ void freeCommand(CommandNode* command)
     command->previous = NULL;
     command->next = NULL;
     command->children = NULL;
-    command->function = NULL;
+    command->callback = NULL;
     free(command);
 }
 
@@ -214,7 +215,7 @@ bool setCmdFullName(CommandNode* command)
     }
 
     /// Note 进行字符拼接
-    char* fullName = calloc((size_t)fullNameLength+1, sizeof(char));
+    char* fullName = calloc(fullNameLength+1, sizeof(char));
     if (fullName == NULL) return false;
     node = command;
     while (node)

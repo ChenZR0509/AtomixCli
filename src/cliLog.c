@@ -80,6 +80,9 @@ void uninitLog(LogConfig* logConfig)
     if (logConfig->buffer) free(logConfig->buffer);
     logConfig->buffer = NULL;
 
+    logConfig->bufferSize = 0;
+    logConfig->mode = CFMode;
+    logConfig->style = TLStyle;
     free(logConfig);
 }
 
@@ -102,11 +105,11 @@ void printLog(const CliConfig* cli, const LogType type, const char *format, ...)
     va_end(args);
     if (cli->logConfig->mode == CmdMode || cli->logConfig->mode == CFMode)
     {
-        cli->printCmd(cli->logConfig->buffer);
+        cli->printCmd(cli->logConfig->buffer, contentLength+1);
     }
     if (cli->logConfig->mode == FileMode || cli->logConfig->mode == CFMode)
     {
-        cli->printFile(cli->logConfig->buffer,cli->logConfig->filePath);
+        cli->printFile(cli->logConfig->buffer,cli->logConfig->filePath,contentLength+1);
     }
 }
 

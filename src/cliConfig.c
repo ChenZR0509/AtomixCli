@@ -78,16 +78,21 @@ void unInitCli(CliConfig* cli)
 
     cli->printCmd = NULL;
     cli->printFile = NULL;
+    cli->registerCommandTree = NULL;
 
     free(cli);
 }
 
-void runCli(const CliConfig* cli,const char* input)
+void runCli(const CliConfig* cli, const char* input)
 {
     Pipeline* pipe = initPipeline(cli, input);
     if (pipe != NULL)
     {
         executePipeline(cli, pipe);
         unInitPipeline(pipe);
+    }
+    else
+    {
+        printLog(cli, LogError, "Failed to init pipeline. [%s]", __FUNCTION__);
     }
 }

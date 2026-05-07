@@ -44,17 +44,6 @@ typedef struct
 /* Variable Declare------------------------------------------------------------------*/
 /* Functions Declare------------------------------------------------------------------*/
 /**
- * @name printLog
- * @brief 打印日志
- *
- * @param[in] cli CLI结构体指针
- * @param[in] type 日志类型 可选项：LogNormal 普通日志 LogError 错误日志 LogWarning 警告日志 LogInfo 信息日志
- * @param[in] format 字符串
- * @param[in] ... 额外形参
- * @return none
- */
-void printLog(const CliConfig* cli, const LogType type, const char *format, ...);
-/**
  * @name initLog
  * @brief 初始化日志
  *
@@ -73,7 +62,17 @@ LogConfig* initLog(const char* filePath, const uint16_t bufferSize, const LogMod
  * @return none
  */
 void uninitLog(LogConfig* logConfig);
-
+/**
+ * @name printLog
+ * @brief 打印日志
+ *
+ * @param[in] cli CLI结构体指针
+ * @param[in] type 日志类型 可选项：LogNormal 普通日志 LogError 错误日志 LogWarning 警告日志 LogInfo 信息日志
+ * @param[in] format 字符串
+ * @param[in] ... 额外形参
+ * @return none
+ */
+void printLog(const CliConfig* cli, const LogType type, const char *format, ...);
 #ifdef __cplusplus
 }
 #endif
