@@ -20,7 +20,6 @@
  * @name initWordList
  * @brief 初始化单词列表
  *
- * @param[in] void
  * @return WordList* 初始化成功返回WordList指针，失败返回NULL
  */
 WordList* initWordList(void);
@@ -45,7 +44,6 @@ bool addWord(WordList* list, char* word);
  * @name initStageList
  * @brief 初始化管道列表
  *
- * @param[in] void
  * @return StageList* 初始化成功返回WordList指针，失败返回NULL
  */
 PipelineStageList* initStageList(void);
@@ -139,20 +137,21 @@ Pipeline* initPipeline(const CliConfig* cli, const char* commandLine)
         unInitPipeline(pipeline);
         return NULL;
     }
-    // 命令行分词
     pipeline->wordList = initWordList();
     if (pipeline->wordList == NULL)
     {
         unInitPipeline(pipeline);       /// Note 分配失败则释放资源
         return NULL;
     }
+
+    // 命令行分词：将命令行字符串分成单词并存储至pipeline->wordList
     if (tokenizeCommandLine(cli, commandLine, pipeline->wordList) == false)
     {
-        printLog(cli, LogError, "Failed to tokenize command line. [Cli: %s]\n", cli->name);
+        printLog(cli, LogError, "Failed to tokenize command line. [Cli: %s]\r\n", commandLine);
         unInitPipeline(pipeline);       /// Note 解析失败则释放资源
         return NULL;
     }
-    // 命令行分管道
+    // 管道分管道阶段：将命令行单词列表分成多个管道阶段，并存储至pipeline->stageList，通过判断‘|’
     pipeline->stageList = initStageList();
     if (pipeline->stageList == NULL)
     {
@@ -161,14 +160,14 @@ Pipeline* initPipeline(const CliConfig* cli, const char* commandLine)
     }
     if (tokenizePipeline(cli, pipeline->wordList, pipeline->stageList) == false)
     {
-        printLog(cli, LogError, "Failed to tokenize pipeline. [Cli: %s]\n", cli->name);
+        printLog(cli, LogError, "Failed to tokenize pipeline. [Cli: %s]\r\n", cli->name);
         unInitPipeline(pipeline);
         return NULL;
     }
-    // 命令行解析
+    // 管道解析：将管道阶段对应到具体的命令节点上，以方便后续的命令执行
     if (parsePipeline(cli, pipeline) == false)
     {
-        printLog(cli, LogError, "Failed to parse pipeline. [Cli: %s]\n", cli->name);
+        printLog(cli, LogError, "Failed to parse pipeline. [Cli: %s]\r\n", cli->name);
         unInitPipeline(pipeline);
         return NULL;
     }
@@ -225,11 +224,8 @@ void unInitWordList(WordList* list)
     {
         for (uint16_t i = 0; i < list->count; i++)
         {
-            if (list->words[i] != NULL)
-            {
-                free(list->words[i]);
-                list->words[i] = NULL;
-            }
+            free(list->words[i]);
+            list->words[i] = NULL;
         }
     }
     free(list->words);
@@ -244,15 +240,14 @@ void unInitWordList(WordList* list)
 bool addWord(WordList* list, char* word)
 {
     if (list == NULL || word == NULL) return false;
+    if (list->capacity == 0) return false;
 
     if (list->count+1 >= list->capacity)
     {
-        const uint16_t newCapacity = list->capacity * 2;
+        const uint16_t newCapacity = list->capacity == 0 ? 2 : list->capacity * 2;
+        /// Note 创建一个临时变量就是为了避免realloc分配失败时导致原来的内存泄漏
         char** newWords = realloc(list->words, newCapacity*sizeof(char*));
-        if (newWords == NULL)
-        {
-            return false;
-        }
+        if (newWords == NULL)   return false;
         list->words = newWords;
         list->capacity = newCapacity;
     }
@@ -269,7 +264,7 @@ PipelineStageList* initStageList(void)
     if (list == NULL) return NULL;
 
     list->count = 0;
-    list->capacity = 1;
+    list->capacity = 2;
     list->currentStage = NULL;
     list->stages = calloc(list->capacity, sizeof(PipelineStage*));
     if (list->stages == NULL)
@@ -292,7 +287,7 @@ void unInitStageList(PipelineStageList* list)
         for (uint16_t i = 0; i < list->count; i++)
         {
             unInitPipelineStage(list->stages[i]);
-             list->stages[i] = NULL;
+            list->stages[i] = NULL;
         }
     }
     free(list->stages);
@@ -311,7 +306,8 @@ bool addStage(PipelineStageList* stageList, PipelineStage* pipelineStage)
 
     if (stageList->count+1 >= stageList->capacity)
     {
-        const uint16_t newCapacity = stageList->capacity * 2;
+        const uint16_t newCapacity = stageList->capacity == 0 ? 2 : stageList->capacity * 2;
+        /// Note 创建一个临时变量就是为了避免realloc分配失败时导致原来的内存泄漏
         PipelineStage** newPipelineStage = realloc(stageList->stages, newCapacity*sizeof(PipelineStage*));
         if (newPipelineStage == NULL)
         {
@@ -394,7 +390,7 @@ bool tokenizeCommandLine(const CliConfig* cli, const char* commandLine, WordList
     if (commandLine == NULL || wordList == NULL) return false;
 
     const char* tempPointer = commandLine;
-    const char* wordStart = 0;
+    const char* wordStart = NULL;
     char quotationMark = 0;
 
     while (isspace(*tempPointer))   tempPointer++;
@@ -420,7 +416,7 @@ bool tokenizeCommandLine(const CliConfig* cli, const char* commandLine, WordList
             if (!*tempPointer) break;
             if (quotationMark != 0) tempPointer++;
             quotationMark = 0;
-            wordStart = 0;
+            wordStart = NULL;
         }
         else if (!quotationMark && (*tempPointer == '"' || *tempPointer == '\''))
         {
@@ -433,7 +429,7 @@ bool tokenizeCommandLine(const CliConfig* cli, const char* commandLine, WordList
         }
         else
         {
-            if (wordStart == 0)
+            if (wordStart == NULL)
             {
                 if (*tempPointer == '|')
                 {
@@ -449,7 +445,7 @@ bool tokenizeCommandLine(const CliConfig* cli, const char* commandLine, WordList
     }
     if (quotationMark != 0)
     {
-        printLog(cli,LogError,"Failed to parse command line: quote mismatch!\n");
+        printLog(cli,LogError,"Quote mismatch detected in command! [%s]\n", commandLine);
         return false;
     }
     return true;
@@ -466,9 +462,17 @@ bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineSt
         /// Note 在单词列表中查找到管道符'|'，或者已经到达单词列表的末尾时，说明一个管道阶段已经结束
         if (strcmp(wordList->words[i], "|") == 0 || i == wordList->count-1)
         {
+            /// Note 如果管道符'|'出现在单词列表的开头或者末尾，说明存在空管道阶段，解析失败
+            if (strcmp(wordList->words[i], "|") == 0 && (i == lastPosition || i == wordList->count - 1))
+            {
+                printLog(cli, LogError, "Empty pipeline stage detected in command! [Cli: %s]\n", cli->name);
+                return false;
+            }
+
             /// Note 创建一个管道阶段
             tempStage = initPipelineStage();
             if (tempStage == NULL)  return false;
+
             /// 将前面的单词添加到管道阶段的单词列表中
             for (uint16_t j = lastPosition; j < i; j++)
             {
@@ -485,16 +489,28 @@ bool tokenizePipeline(const CliConfig* cli, const WordList* wordList, PipelineSt
                     return false;
                 }
             }
+
             if (i == wordList->count-1 && strcmp(wordList->words[i], "|") != 0)
             {
                 char* tempWord = strdup(wordList->words[i]);
-                if (tempWord == NULL)  return false;
+                if (tempWord == NULL)
+                {
+                    unInitPipelineStage(tempStage);
+                    return false;
+                }
                 if (addWord(tempStage->wordList, tempWord) == false)
                 {
                     free(tempWord);
                     unInitPipelineStage(tempStage);
                     return false;
                 }
+            }
+            /// Note 判断是否为空管道
+            if (tempStage->wordList->count == 0)
+            {
+                printLog(cli, LogError, "Empty pipeline stage detected in command! [Cli: %s]\n", cli->name);
+                unInitPipelineStage(tempStage);
+                return false;
             }
             /// Note 将管道阶段添加到管道列表中
             if (addStage(stages, tempStage) == false)
@@ -524,6 +540,7 @@ bool parsePipeline(const CliConfig* cli, const Pipeline* pipeline)
         CommandNode* matchedNode = NULL;
         CommandNode* resultNode = NULL;
         uint16_t j = 0;
+        /// Note 将管道阶段的单词列表中的单词逐个在命令树中进行匹配，直到匹配失败或者单词列表已经匹配完为止
         for (; j < stage->wordList->count; j++)
         {
             const char* word = stage->wordList->words[j];
@@ -533,13 +550,15 @@ bool parsePipeline(const CliConfig* cli, const Pipeline* pipeline)
             resultNode = matchedNode;
             parentNode = resultNode;
         }
-        if (resultNode == NULL) return false;
+        /// Note 验证节点有效性：节点指针、节点回调函数
+        if (resultNode == NULL || resultNode->callback == NULL) return false;
         stage->commandNode = resultNode;
-        stage->argc = stage->wordList->count-j;
-        if (stage->argc > 0)
+        /// Note 将后面的单词视为参数，初始化argv和argc
+        if (stage->wordList->count-j > 0)
         {
-            stage->argv = calloc(stage->argc+1, sizeof(char*));
+            stage->argv = calloc(stage->wordList->count-j+1, sizeof(char*));
             if (stage->argv == NULL) return false;
+            stage->argc = stage->wordList->count-j;
             for (uint16_t k = 0; k < stage->argc; k++)
             {
                 stage->argv[k] = strdup(stage->wordList->words[j+k]);

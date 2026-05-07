@@ -91,8 +91,4 @@ void runCli(const CliConfig* cli, const char* input)
         executePipeline(cli, pipe);
         unInitPipeline(pipe);
     }
-    else
-    {
-        printLog(cli, LogError, "Failed to init pipeline. [%s]", __FUNCTION__);
-    }
 }
